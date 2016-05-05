@@ -10,11 +10,22 @@ For a complete walkthrough of creating this bot see the article below.
 -----------------------------------------------------------------------------*/
 
 var builder = require('botbuilder');
+var restify = require('restify');
 
-// Create LUIS Dialog that points at our model and add it as the root '/' dialog for our Cortana Bot.
+// Get secrets from server environment
+var botConnectorOptions = { 
+    appId: process.env.BOTFRAMEWORK_APPID, 
+    appSecret: process.env.BOTFRAMEWORK_APPSECRET 
+};
+
+
+//   Step 1 : Create LUIS Dialog that points at our model and add it as the root '/' dialog for our Cortana Bot.
 var model = process.env.model || 'https://api.projectoxford.ai/luis/v1/application?id=c413b2ef-382c-45bd-8ff0-f76d60e2a821&subscription-key=6d0966209c6e4f6b835ce34492f3e6d9&q=';
 var dialog = new builder.LuisDialog(model);
-var cortanaBot = new builder.TextBot();
+
+// Step 2 : create a bot that talks to microsoft connector service 
+
+var cortanaBot = new builder.BotConnectorBot(botConnectorOptions);
 cortanaBot.add('/', dialog);
 
 // Add intent handlers
@@ -115,7 +126,18 @@ cortanaBot.add('/notify', function (session, alarm) {
    session.endDialog(); // <= we don't want replies coming to us 
 });
 
-cortanaBot.listenStdin();
+
+
+// Seting up our  Restify Server . 
+var server = restify.createServer();
+
+// Microsoft connector talks to us over this rest interface by http post 
+server.post('/api/messages', cortanaBot.verifyBotFramework(), cortanaBot.listen());
+server.listen(process.env.port || 3978, function () {
+    console.log('%s listening to %s', server.name, server.url); 
+});
+
+// cortanaBot.listenStdin();
 
 // Very simple demo scheduler
 var alarms = {};
