@@ -133,7 +133,14 @@ var server = restify.createServer();
 
 // Microsoft connector talks to us over this rest interface by http post 
 server.post('/api/messages', cortanaBot.verifyBotFramework(), cortanaBot.listen());
-server.listen(process.env.port || 3978, function () {
+
+// Serve a static web page
+server.get(/.*/, restify.serveStatic({
+	'directory': '.',
+	'default': 'index.html'
+}));
+
+server.listen(process.env.port || 3979, function () {
     console.log('%s listening to %s', server.name, server.url); 
 });
 
